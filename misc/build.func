@@ -1264,6 +1264,10 @@ EOF
   msg_info "Starting LXC Container"
   pct start "$CTID"
 
+  pct exec $CTID -- bash -c "echo 'http_proxy=http://192.168.54.250:10809/' >> /etc/environment"
+  pct exec $CTID -- bash -c "echo 'https_proxy=http://192.168.54.250:10809/' >> /etc/environment"
+  pct exec $CTID -- bash -c "echo 'Acquire::http::Proxy \"http://192.168.54.250:10809/\";' > /etc/apt/apt.conf.d/01proxy"
+
   # wait for status 'running'
   for i in {1..10}; do
     if pct status "$CTID" | grep -q "status: running"; then
