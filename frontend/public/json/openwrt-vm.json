@@ -1,6 +1,6 @@
 {
   "name": "OpenWrt",
-  "slug": "openwrt",
+  "slug": "openwrt-vm",
   "categories": [
     4,
     2
@@ -10,7 +10,7 @@
   "updateable": true,
   "privileged": false,
   "interface_port": null,
-  "documentation": null,
+  "documentation": "https://openwrt.org/docs/start",
   "website": "https://openwrt.org/",
   "logo": "https://cdn.jsdelivr.net/gh/selfhst/icons/webp/openwrt.webp",
   "config_path": "",
@@ -18,7 +18,7 @@
   "install_methods": [
     {
       "type": "default",
-      "script": "vm/openwrt.sh",
+      "script": "vm/openwrt-vm.sh",
       "resources": {
         "cpu": 1,
         "ram": 256,

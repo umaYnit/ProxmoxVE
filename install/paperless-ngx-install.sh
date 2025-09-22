@@ -59,6 +59,7 @@ $STD bash ./autogen.sh
 $STD bash ./configure
 $STD make
 $STD make install
+cd /
 rm -rf /opt/jbig2enc
 msg_ok "Installed JBIG2"
 
@@ -72,15 +73,16 @@ $STD sudo -u postgres psql -c "CREATE DATABASE $DB_NAME WITH OWNER $DB_USER ENCO
 $STD sudo -u postgres psql -c "ALTER ROLE $DB_USER SET client_encoding TO 'utf8';"
 $STD sudo -u postgres psql -c "ALTER ROLE $DB_USER SET default_transaction_isolation TO 'read committed';"
 $STD sudo -u postgres psql -c "ALTER ROLE $DB_USER SET timezone TO 'UTC'"
-echo "" >>~/paperless.creds
-echo -e "Paperless-ngx Database User: \e[32m$DB_USER\e[0m" >>~/paperless.creds
-echo -e "Paperless-ngx Database Password: \e[32m$DB_PASS\e[0m" >>~/paperless.creds
-echo -e "Paperless-ngx Database Name: \e[32m$DB_NAME\e[0m" >>~/paperless.creds
-
-msg_info "Installing Natural Language Toolkit (Patience)"
-$STD uv run -- python -m nltk.downloader -d /usr/share/nltk_data all
-sed -i -e 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml
-msg_ok "Installed Natural Language Toolkit"
+{
+  echo "Paperless-ngx-Credentials"
+  echo "Paperless-ngx Database Name: $DB_NAME"
+  echo "Paperless-ngx Database User: $DB_USER"
+  echo "Paperless-ngx Database Password: $DB_PASS"
+  echo "Paperless-ngx Secret Key: $SECRET_KEY\n"
+  echo "Paperless-ngx WebUI User: admin"
+  echo "Paperless-ngx WebUI Password: $DB_PASS"
+} >>~/paperless-ngx.creds
+msg_ok "Setup PostgreSQL database"
 
 msg_info "Setup Paperless-ngx"
 cd /opt/paperless
@@ -101,6 +103,9 @@ sed -i \
   -e "s|#PAPERLESS_SECRET_KEY=change-me|PAPERLESS_SECRET_KEY=$SECRET_KEY|" \
   /opt/paperless/paperless.conf
 cd /opt/paperless/src
+set -a
+. /opt/paperless/paperless.conf
+set +a
 $STD uv run -- python manage.py migrate
 msg_ok "Setup Paperless-ngx"
 
@@ -113,16 +118,16 @@ user.is_superuser = True
 user.is_staff = True
 user.save()
 EOF
-{
-  echo "Paperless-ngx-Credentials"
-  echo "Paperless-ngx Database Name: $DB_NAME"
-  echo "Paperless-ngx Database User: $DB_USER"
-  echo "Paperless-ngx Database Password: $DB_PASS"
-  echo "Paperless-ngx Secret Key: $SECRET_KEY\n"
-  echo "Paperless-ngx WebUI User: admin"
-  echo "Paperless-ngx WebUI Password: $DB_PASS"
-} >>~/paperless-ngx.creds
 msg_ok "Set up admin Paperless-ngx User & Password"
+
+msg_info "Installing Natural Language Toolkit (Patience)"
+cd /opt/paperless
+$STD uv run python -m nltk.downloader -d /usr/share/nltk_data snowball_data
+$STD uv run python -m nltk.downloader -d /usr/share/nltk_data stopwords
+$STD uv run python -m nltk.downloader -d /usr/share/nltk_data punkt_tab || \
+$STD uv run python -m nltk.downloader -d /usr/share/nltk_data punkt
+sed -i -e 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml
+msg_ok "Installed Natural Language Toolkit"
 
 msg_info "Creating Services"
 cat <<EOF >/etc/systemd/system/paperless-scheduler.service
