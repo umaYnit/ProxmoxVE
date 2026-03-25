@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
-# Copyright (c) 2021-2025 tteck
+# Copyright (c) 2021-2026 tteck
 # Author: tteck (tteckster)
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
-# Source: https://uptime.kuma.pet/
+# Source: https://uptime.kuma.pet/ | Github: https://github.com/louislam/uptime-kuma
 
 APP="Uptime Kuma"
 var_tags="${var_tags:-analytics;monitoring}"
@@ -11,7 +11,7 @@ var_cpu="${var_cpu:-1}"
 var_ram="${var_ram:-1024}"
 var_disk="${var_disk:-4}"
 var_os="${var_os:-debian}"
-var_version="${var_version:-12}"
+var_version="${var_version:-13}"
 var_unprivileged="${var_unprivileged:-1}"
 
 header_info "$APP"
@@ -27,35 +27,31 @@ function update_script() {
     msg_error "No ${APP} Installation Found!"
     exit
   fi
-  if [[ "$(node -v | cut -d 'v' -f 2)" == "18."* ]]; then
-    if ! command -v npm >/dev/null 2>&1; then
-      echo "Installing NPM..."
-      $STD apt-get install -y npm
-      echo "Installed NPM..."
-    fi
+
+  NODE_VERSION="22" setup_nodejs
+
+  ensure_dependencies chromium
+  if [[ ! -L /opt/uptime-kuma/chromium ]]; then
+    ln -s /usr/bin/chromium /opt/uptime-kuma/chromium
   fi
 
-  RELEASE=$(curl -fsSL https://api.github.com/repos/louislam/uptime-kuma/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')
-  if [[ ! -f ~/.uptime-kuma ]] || [[ "${RELEASE}" != "$(cat ~/.uptime-kuma)" ]]; then
-    msg_info "Stopping ${APP}"
-    $STD systemctl stop uptime-kuma
-    msg_ok "Stopped ${APP}"
+  if check_for_gh_release "uptime-kuma" "louislam/uptime-kuma"; then
+    msg_info "Stopping Service"
+    systemctl stop uptime-kuma
+    msg_ok "Stopped Service"
 
     fetch_and_deploy_gh_release "uptime-kuma" "louislam/uptime-kuma" "tarball"
-    cd /opt/uptime-kuma
 
-    msg_info "Updating ${APP} to ${RELEASE}"
+    msg_info "Updating Uptime Kuma"
+    cd /opt/uptime-kuma
     $STD npm install --omit dev
     $STD npm run download-dist
-    msg_ok "Updated ${APP}"
+    msg_ok "Updated Uptime Kuma"
 
-    msg_info "Starting ${APP}"
-    $STD sudo systemctl start uptime-kuma
-    msg_ok "Started ${APP}"
-
-    msg_ok "Updated Successfully"
-  else
-    msg_ok "No update required. ${APP} is already at ${RELEASE}"
+    msg_info "Starting Service"
+    systemctl start uptime-kuma
+    msg_ok "Started Service"
+    msg_ok "Updated successfully!"
   fi
   exit
 }
@@ -64,7 +60,7 @@ start
 build_container
 description
 
-msg_ok "Completed Successfully!\n"
+msg_ok "Completed successfully!\n"
 echo -e "${CREATING}${GN}${APP} setup has been successfully initialized!${CL}"
 echo -e "${INFO}${YW} Access it using the following URL:${CL}"
 echo -e "${TAB}${GATEWAY}${BGN}http://${IP}:3001${CL}"
